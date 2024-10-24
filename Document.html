@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversational Document Recognition Chatbot</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.2.228/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.4.0/dist/tesseract.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/generative-ai": "https://esm.run/@google/generative-ai"
+      }
+    }
+  </script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #E0F7FA, #B9FBC0);
+            color: #333;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 50px;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            opacity: 1;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #0288D1;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.1);
+        }
+
+        .cta-button {
+            padding: 10px 20px;
+            background-color: #0288D1;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0px 10px 20px rgba(0, 136, 209, 0.5);
+        }
+
+        .cta-button:hover {
+            background-color: #02669B;
+            transform: translateY(-5px);
+        }  
+        
+        .cta-button a{
+            color: white;
+            text-decoration: none;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            border-radius: 12px;
+            margin: 20px;
+            margin-bottom: 100px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 15px 20px;
+            background: #ffffff49;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            bottom: 20px;
+            width: calc(100% - 75px);
+            margin: 0 20px;
+
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        #chooseFileButton {
+            margin-right: 15px;
+            cursor: pointer;
+            font-size: 1em;
+            color: #ffffff;
+            background: #007BFF;
+            padding: 8px 12px;
+            border-radius: 5px;
+            transition: background-color 0.3s, transform 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #chooseFileButton:hover {
+            background: #0056b3;
+        }
+
+        #chooseFileButton:active {
+            transform: scale(0.98);
+        }
+
+        #questionInput {
+            flex: 1;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-right: 15px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        #questionInput:focus {
+            border-color: #007BFF;
+            outline: none;
+        }
+
+        #sendButton {
+            background-color: #007BFF;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        #sendButton:hover {
+            background-color: #0056b3;
+        }
+
+        #sendButton:active {
+            transform: scale(0.98);
+        }
+
+        .message {
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message .content {
+            max-width: 60%;
+            padding: 12px;
+            border-radius: 12px;
+            background: #f1f1f1;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            word-break: break-word;
+        }
+
+        .message.bot .content {
+            background: #E0F7FA;
+            border-radius: 15px 15px 0 15px;
+        }
+
+        .message.user .content {
+            background: #B9FBC0;
+            border-radius: 15px 15px 15px 0;
+        }
+
+        .message img {
+            max-width: 300px;
+            height: auto;
+            border-radius: 12px;
+        }
+
+        .default-message {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: calc(100vh - 140px);
+            padding: 20px;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .default-message h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #007BFF, #00C853);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientAnimation 3s linear infinite;
+        }
+
+        .default-message p {
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes gradientAnimation {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .message .content {
+                max-width: 80%;
+            }
+
+            .input-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #questionInput {
+                margin-bottom: 10px;
+                width: 100%;
+            }
+
+            #sendButton {
+                width: 100%;
+                padding: 15px;
+            }
+
+            #chooseFileButton {
+                font-size: 1em;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">Tutorix</div>
+        <button class="cta-button"><a href="index.html">back</a></button>
+    </header>
+    <div class="default-message" id="defaultMessage">
+        <h1>Conversational Document Recognition Chatbot</h1>
+        <p>Upload a document and ask questions about it.</p>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <!-- Chat messages will be appended here -->
+    </div>
+
+    <div class="input-container">
+        <label id="chooseFileButton" for="fileInput">
+            <span><i class="fa fa-file"></i> Upload Document</span>
+        </label>
+        <input type="file" id="fileInput" accept=".ppt, .pptx, .doc, .docx, .pdf">
+        <input id="questionInput" type="text" placeholder="Ask your question here">
+        <button id="sendButton">Send</button>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
+
+        const API_KEY = "AIzaSyBeZqoS317cinZC208WPjvF6u4CrhabU3I";
+        let genAI;
+        let model;
+        let uploadedDocument = null;
+
+        async function createModel(modelType = "gemini-1.5-flash") {
+            genAI = new GoogleGenerativeAI(API_KEY);
+            model = genAI.getGenerativeModel({
+                model: modelType,
+                safetySettings: [
+                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+                ]
+            });
+        }
+
+        await createModel();
+
+        document.getElementById('sendButton').addEventListener('click', async () => {
+            const prompt = document.getElementById('questionInput').value;
+            if (!uploadedDocument && !prompt.trim()) {
+                addBotMessage('Please upload a document and ask a question.');
+                return;
+            }
+
+            addUserMessage(prompt);
+
+            if (uploadedDocument) {
+                addLoadingMessage();
+                const docParts = [await fileToGenerativePart(uploadedDocument)];
+                const result = await model.generateContent([prompt, ...docParts]);
+                const response = await result.response;
+                const text = await response.text();
+                removeLoadingMessage();
+                addBotMessage(text);
+            }
+
+            document.getElementById('questionInput').value = '';
+        });
+
+        document.getElementById('fileInput').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file && (file.type === 'application/pdf' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+                uploadedDocument = file;
+                displayUploadedDocument(file);
+                document.getElementById('defaultMessage').classList.add('hidden');
+            } else {
+                addBotMessage('Please upload only document files (.pdf, .docx).');
+            }
+        });
+
+        function displayUploadedDocument(file) {
+            addUserMessage('<strong>' + file.name + '</strong> has been uploaded.');
+        }
+
+        function addUserMessage(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'user');
+            messageElement.innerHTML = '<div class="content">' + message + '</div>';
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;  // Scroll to the bottom
+        }
+
+        function addBotMessage(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'bot');
+
+            let formattedMessage = message
+                .replace(/^# (.+)/gm, '<h1>$1</h1>')  // Convert # to <h1>
+                .replace(/^## (.+)/gm, '<h2>$1</h2>')  // Convert ## to <h2>
+                .replace(/^### (.+)/gm, '<h3>$1</h3>') // Convert ### to <h3>
+                .replace(/^- (.+)/gm, '<li>$1</li>')  // Convert - to <li>
+                .replace(/(?:\*\*)([^*]+)(?:\*\*)/g, '<strong>$1</strong>')  // Convert **text** to bold
+                .replace(/\n/g, '<br>');  // Convert line breaks
+
+            if (formattedMessage.includes('<li>')) {
+                formattedMessage = '<ul>' + formattedMessage + '</ul>';
+            }
+
+            messageElement.innerHTML = '<div class="content">' + formattedMessage + '</div>';
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;  // Scroll to the bottom
+        }
+
+        function addLoadingMessage() {
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingMessage = document.createElement('div');
+            loadingMessage.classList.add('message', 'bot');
+            loadingMessage.innerHTML = '<div class="content">Processing... <div class="loader"></div></div>';
+            chatContainer.appendChild(loadingMessage);
+            chatContainer.scrollTop = chatContainer.scrollHeight;  // Scroll to the bottom
+        }
+
+        function removeLoadingMessage() {
+            const chatContainer = document.getElementById('chatContainer');
+            const loader = chatContainer.querySelector('.message.bot .loader');
+            if (loader) {
+                loader.parentElement.parentElement.remove();
+            }
+        }
+
+        async function fileToGenerativePart(file) {
+            const base64EncodedDataPromise = new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+            return {
+                inlineData: { data: await base64EncodedDataPromise, mimeType: file.type }
+            };
+        }
+    </script>
+
+</body>
+
+</html>

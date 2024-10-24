@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversational Text Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/generative-ai": "https://esm.run/@google/generative-ai"
+      }
+    }
+  </script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #E0F7FA, #B9FBC0);
+            color: #333;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 50px;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            opacity: 1;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #0288D1;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.1);
+        }
+
+        .cta-button {
+            padding: 10px 20px;
+            background-color: #0288D1;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0px 10px 20px rgba(0, 136, 209, 0.5);
+        }
+
+        .cta-button:hover {
+            background-color: #02669B;
+            transform: translateY(-5px);
+        }
+
+        .cta-button a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            border-radius: 10px;
+            margin: 20px;
+            margin-bottom: 100px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 20px;
+            background: #ffffff2e;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            bottom: 20px;
+            width: calc(100% - 75px);
+            margin: 0 20px;
+        }
+
+        #questionInput {
+            flex: 1;
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-right: 10px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        #questionInput:focus {
+            border-color: #007BFF;
+            outline: none;
+        }
+
+        #sendButton {
+            background-color: #007BFF;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        #sendButton:hover {
+            background-color: #0056b3;
+        }
+
+        #sendButton:active {
+            transform: scale(0.98);
+        }
+
+        .message {
+            margin: 10px 0;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message .content {
+            max-width: 60%;
+            padding: 10px;
+            border-radius: 15px;
+            background: #f1f1f1;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            word-break: break-word;
+        }
+
+        .message.bot .content {
+            background: #e1f5fe;
+            border-radius: 15px 15px 0 15px;
+        }
+
+        .message.user .content {
+            background: #c5e1a5;
+            border-radius: 15px 15px 15px 0;
+        }
+
+        .default-message {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: calc(100vh - 140px);
+            padding: 20px;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .default-message h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #007BFF, #00C853);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientAnimation 3s linear infinite;
+        }
+
+        .default-message p {
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes gradientAnimation {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .message .content {
+                max-width: 80%;
+            }
+
+            .input-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #questionInput {
+                margin-bottom: 10px;
+                width: 100%;
+            }
+
+            #sendButton {
+                width: 100%;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">Tutorix</div>
+        <button class="cta-button"><a href="index.html">back</a></button>
+    </header>
+    <div class="default-message" id="defaultMessage">
+        <h1>AI Programming Assistant</h1>
+        <p>Paste your code below to get analysis, explanation, or debugging help.</p>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <!-- Chat messages will be appended here -->
+    </div>
+
+    <div class="input-container">
+        <input id="questionInput" type="text" placeholder="Enter your code here or describe the issue">
+        <button id="sendButton">Send</button>
+    </div>
+
+    <script type="module">
+        import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
+
+        const API_KEY = "AIzaSyBeZqoS317cinZC208WPjvF6u4CrhabU3I";
+        let genAI;
+        let model;
+
+        async function createModel(modelType = "gemini-1.5-flash") {
+            genAI = new GoogleGenerativeAI(API_KEY);
+            model = genAI.getGenerativeModel({
+                model: modelType,
+                safetySettings: [
+                    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+                ]
+            });
+        }
+
+        await createModel();
+
+        document.getElementById('sendButton').addEventListener('click', async () => {
+            const codeInput = document.getElementById('questionInput').value;
+            const defaultMessage = document.getElementById('defaultMessage'); // Get the default message element
+
+            if (!codeInput.trim()) {
+                addBotMessage('Please enter some code or describe the issue to analyze.');
+                return;
+            }
+
+            if (defaultMessage) {
+                defaultMessage.classList.add('hidden'); // Hide the default message
+            }
+
+            addUserMessage(`Analyzing the following code/issue: ${codeInput}`);
+
+            addLoadingMessage();
+            const codeAnalysisPrompt = `Analyze and explain the following code, identify errors, and suggest debugging tips if necessary: ${codeInput}`;
+            const result = await model.generateContent([codeAnalysisPrompt]);
+            const response = await result.response;
+            const explanation = await response.text();
+            removeLoadingMessage();
+            addBotMessage(explanation);
+
+            document.getElementById('questionInput').value = '';  // Clear the input field
+        });
+
+        function addUserMessage(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'user');
+            messageElement.innerHTML = '<div class="content">' + message + '</div>';
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;  // Scroll to the bottom
+        }
+
+        function addBotMessage(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'bot');
+
+            // Format the bot's response message
+            let formattedMessage = message
+                .replace(/^# (.+)/gm, '<h1>$1</h1>')  // Convert # to <h1>
+                .replace(/^## (.+)/gm, '<h2>$1</h2>')  // Convert ## to <h2>
+                .replace(/^### (.+)/gm, '<h3>$1</h3>') // Convert ### to <h3>
+                .replace(/^- (.+)/gm, '<li>$1</li>')  // Convert - to <li>
+                .replace(/(?:\*\*)([^*]+)(?:\*\*)/g, '<strong>$1</strong>')  // Convert **text** to bold
+                .replace(/\n/g, '<br>');  // Convert line breaks
+
+            if (formattedMessage.includes('<li>')) {
+                formattedMessage = '<ul>' + formattedMessage + '</ul>';
+            }
+
+            messageElement.innerHTML = '<div class="content">' + formattedMessage + '</div>';
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;  // Scroll to the bottom
+        }
+
+        function addLoadingMessage() {
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingMessage = document.createElement('div');
+            loadingMessage.classList.add('message', 'bot');
+            loadingMessage.innerHTML = '<div class="content">Analyzing your code... <div class="loader"></div></div>';
+            chatContainer.appendChild(loadingMessage);
+            chatContainer.scrollTop = chatContainer.scrollHeight;  // Scroll to the bottom
+        }
+
+        function removeLoadingMessage() {
+            const chatContainer = document.getElementById('chatContainer');
+            const loader = chatContainer.querySelector('.message.bot .loader');
+            if (loader) {
+                loader.parentElement.parentElement.remove();
+            }
+        }
+    </script>
+</body>
+
+
+
+</html>
