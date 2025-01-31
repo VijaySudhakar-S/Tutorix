@@ -305,7 +305,7 @@
             addUserMessage(`Generating a quiz on: ${topic}`);
 
             addLoadingMessage();
-            const quizPrompt = `Generate a quiz with questions and answers at last, about the topic: ${topic}`;
+            const quizPrompt = `Generate a quiz about the topic: ${topic} ,with questions and give answers at last of all the questions`;
             const result = await model.generateContent([quizPrompt]);
             const response = await result.response;
             const text = await response.text();
